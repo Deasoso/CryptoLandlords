@@ -1,0 +1,16 @@
+{
+  "require": {
+    "hoa/websocket": "~3.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "DDZ\\": "src/"
+    }
+  },
+  "repositories": {
+    "packagist": {
+      "type": "composer",
+      "url": "https://packagist.phpcomposer.com"
+    }
+  }
+}
