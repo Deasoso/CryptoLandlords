@@ -17,10 +17,6 @@ class Player extends Node
         $this->id = $playerId;
     }
 
-    public function setCards(array $cards) {
-        $this->cards = $cards;
-    }
-
     public function useCards(array $cards) {
         if (!empty($cards)
             && count($cards) == count(array_intersect($this->cards, $cards))

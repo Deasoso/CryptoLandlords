@@ -19,16 +19,16 @@ class Util
                 "12" => "Q",
                 "13" => "K",
                 "14" => "A",
-                "15" => "2",
-                "17" => "X",
-                "19" => "Y",
+                "16" => "2",
+                "18" => "X",
+                "20" => "Y",
             ];
             self::$card2point = array_flip(self::$point2card);
 
             foreach (self::$card2point as $point) {
                 foreach (range(1, 4) as $color) {
                     self::$cards [] = $point * 100 + $color;
-                    if ($point > 15) continue 2;
+                    if ($point > 16) continue 2;
                 }
             }
         }

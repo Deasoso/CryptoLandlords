@@ -130,18 +130,11 @@ class Server extends WsServer
                 $room->broadcastLastMessage();
                 if ($message->data['cards']) {
                     $node->useCards($message->data['cards']);
-                    Console::out($message->data['cards']);
                     if (empty($node->cards)) {
+                        $room->gameOver($masterWin = $node->isMaster());
                         $room->reset();
                         $room->resetPlayers();
-                        $room->broadcast([
-                            "action" => "restart",
-                            "masterWin" => $node->isMaster(),
-                        ]);
-                        Console::out("Game Over.");
                     }
-                } else {
-                    Console::out("pass");
                 }
                 break;
 

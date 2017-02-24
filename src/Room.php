@@ -43,12 +43,12 @@ class Room
         $source = $this->lastMessage->getSource(); // poor
         foreach ($this->players as $node) {
             $cards = array_pop($this->groupCards);
-            $node->setCards ($cards);
+            $node->cards = $cards;
             $source->send(json_encode([
                 "action" => "start",
                 "speaker" => $this->speaker,
+                "playerId" => $node->id,
                 "cards" => $cards,
-                "roomState" => $this->state,
             ]), $node);
         }
     }
@@ -66,10 +66,24 @@ class Room
         ]);
     }
 
+    public function gameOver($masterWin) {
+        $cards = [];
+        foreach ($this->players as $node) {
+            $cards[$node->id] = (array) $node->getCards();
+        }
+        $this->broadcast([
+            "action" => "gameOver",
+            "data" => [
+                "masterWin" => $masterWin,
+                "cards" => $cards,
+            ],
+        ]);
+    }
+
     public function prepareMaster($node) {
         $node->setMaster(true);
         $cards = $node->getCards();
-        $node->setCards = array_merge($cards, $this->coverCards);
+        $node->cards = array_merge($cards, $this->coverCards);
     }
 
     public function broadcast($data, $source = null) {
