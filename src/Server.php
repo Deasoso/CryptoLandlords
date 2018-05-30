@@ -9,6 +9,7 @@ use Hoa\Websocket\Server as WsServer;
 class Server extends WsServer
 {
     public $rooms = [];
+    public $roomamount = 0;
 
     public function addRoom() {
         $index = count($this->rooms);
@@ -38,21 +39,40 @@ class Server extends WsServer
     public function onOpen(Bucket $bucket) {
         $nodeCount = count($bucket->getSource()->getConnection()->getNodes());
         $roomCount = count($this->rooms);
-        if ($nodeCount > $roomCount * 3) {
-            $this->addRoom();
+        $maxroom = 200;
+        while ($this->roomamount < $maxroom) {
+            $this -> addRoom();
+            $this->roomamount += 1;
         }
     }
 
     public function onClose(Bucket $bucket) {
+        $source = $bucket->getSource();
         $node = $bucket->getSource()->getConnection()->getCurrentNode();
-
+        Console::out("{$node->id} lefting1");
         if (isset($this->rooms[$node->roomId])) {
+            Console::out("{$node->getId()} lefting2");
             $room = $this->rooms[$node->roomId];
-            $room->broadcast([
-                "action" => "leave",
-                "playerId" => $node->id,
-            ], $bucket->getSource());
+            $leaveid = $node->id;
+            Console::out("{$node->getId()} lefting3");
             $room->removePlayer($node);
+            // $room->broadcast([
+            //     "action" => "leavee",
+            //     "playerId" => $leaveid,
+            //     "data" => ["players" => $room->players]
+            // ], $bucket->getSource());
+            foreach ($room->players as $node) {
+                $source->send([
+                            "action" => "goout",
+                            // "data" => ["players" => $room->players]
+                        ]
+                    , $node);
+            }
+            // $source->send([
+            //         "action" => "goout",
+            //         // "data" => ["players" => $room->players]
+            //     ]);
+            Console::out("{$node->getId()} leftroom");
         } else {
             Console::out("{$node->getId()} left");
         }
@@ -85,8 +105,12 @@ class Server extends WsServer
                         "rooms" => $this->getAllRooms()
                     ]));
                     break;
+                case "setaddr":
+                    $node->address = $message->data['address'];
+                    break;
                 default:
                     $source->send("not in a room");
+
             }
             return;
         }
@@ -94,9 +118,11 @@ class Server extends WsServer
         $room->lastMessage = $message;
 
         switch ($message->action) {
+
             case "leave":
                 $room->broadcastLastMessage([
-                    "playerId" => $node->id
+                    "playerId" => $node->id,
+                    //"players" => $room->getPlayers()
                 ]);
                 $node->reset();
                 $room->removePlayer($node);
@@ -105,7 +131,7 @@ class Server extends WsServer
             case "ready":
                 $node->ready = true;
                 $room->broadcastLastMessage(["players" => $room->getPlayers()]);
-                $room->start();
+                $room->createround();
                 break;
 
             case "call":
@@ -115,7 +141,7 @@ class Server extends WsServer
                 } else {
                     if ($room->callCount > 2) {
                         $room->reset();
-                        $room->start();
+                        $room->createround();
                         Console::out("room restarted.");
                     } else {
                         $room->tickSpeaker();
@@ -141,6 +167,17 @@ class Server extends WsServer
             case "info":
                 print_r($room->info());
                 print_r($node->info());
+                break;
+
+            case "payed":
+                $node->ispayed = true;
+                $room->payed();
+                break;
+                
+            case "creatednewround":
+                //$node->createround();
+                $room->isreadytopay = true;
+                $room->requestpay($message->data['roundid']);
                 break;
 
             default:

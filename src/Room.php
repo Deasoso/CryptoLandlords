@@ -13,6 +13,9 @@ class Room
     public $state; // 0: waiting, 1: calling, 2: playing
     public $lastMessage; // most recent \DDZ\Message
     public $callCount;
+    public $roundid = -1;
+    public $isreadytopay = false;
+    public $coin = 10;
 
     public function __construct($id) {
         $this->id = $id;
@@ -33,11 +36,30 @@ class Room
         $this->speaker = ($this->speaker+1) % 3;
     }
 
-    public function start() {
-        if (! $this->isAllReady()) {
+    public function requestpay($roundid) { // could be better
+        if (!$this->isreadytopay) {
             return ;
         }
+        $this->roundid = $roundid;
+        $source = $this->lastMessage->getSource(); // poor
+        Console::out("{$roundid} requested");
+        foreach ($this->players as $node) {
+            if ($node->ispayed){
+                return ;
+            }else{
+                $source = $this->lastMessage->getSource(); // poor
+                $source->send(json_encode([
+                    "action" => "pay",
+                    "roundid" => $this->roundid,
+                ]), $node);
+            }
+        }
+    }
 
+    public function payed(){
+        if (! $this->isAllPayed()) {
+            return ;
+        }
         $this->reset();
         $this->state = 1;
         $source = $this->lastMessage->getSource(); // poor
@@ -50,6 +72,34 @@ class Room
                 "playerId" => $node->id,
                 "cards" => $cards,
             ]), $node);
+        }
+    }
+    
+    public function createround(){
+        if (! $this->isAllReady()) {
+            return ;
+        }
+        $source = $this->lastMessage->getSource(); // poor
+        $playeraddr=array();
+        $i = 0;
+        foreach ($this->players as $node) {
+            $playeraddr[$i] = $node->address;
+            $i++;
+        }
+        foreach ($this->players as $node) {
+            if ($node->iscreator){
+                $source->send(json_encode([
+                    "action" => "createnewround",
+                    "player1" => $playeraddr[0],
+                    "player2" => $playeraddr[1],
+                    "player3" => $playeraddr[2],
+                    "coin" => $this->coin,
+                ]), $node); // poor
+            }else{
+                $source->send(json_encode([
+                    "action" => "waitingnewround",
+                ]), $node); // poor
+            }
         }
     }
 
@@ -68,14 +118,20 @@ class Room
 
     public function gameOver($masterWin) {
         $cards = [];
+        $masteraddr = "";
         foreach ($this->players as $node) {
             $cards[$node->id] = (array) $node->getCards();
+            if ($node->master){
+                $masteraddr = $node->address;
+            }
         }
         $this->broadcast([
             "action" => "gameOver",
             "data" => [
                 "masterWin" => $masterWin,
                 "cards" => $cards,
+                "masteraddr" => $masteraddr,
+                "roundid" => $this->roundid,
             ],
         ]);
     }
@@ -87,6 +143,7 @@ class Room
     }
 
     public function broadcast($data, $source = null) {
+        Console::out("broadcasting");
         $source = $source ?: $this->lastMessage->getSource(); // poor
         $message = json_encode($data);
         foreach ($this->players as $node) {
@@ -105,6 +162,15 @@ class Room
         $count = 0;
         foreach ($this->players as $node) {
             if ($node->ready)
+                $count++;
+        }
+        return $count === 3;
+    }
+    
+    public function isAllPayed() {
+        $count = 0;
+        foreach ($this->players as $node) {
+            if ($node->ispayed)
                 $count++;
         }
         return $count === 3;
@@ -133,6 +199,13 @@ class Room
             return [false, "seat taken"];
         }
 
+        foreach ($this->players as $id => $player) {
+            if ($player->address == $node->address) return [false, "already in room"];
+        }
+
+        if (count($this->players) === 0){
+            $node->firstinroom();
+        }
         $node->joinRoom($this->id, $seatIndex);
         $this->players[$seatIndex] = $node;
         return [true, "joined @{$seatIndex}"];
