@@ -2,7 +2,7 @@
 
 ## 安装
 ```sh
-git clone https://github.com/Deasoso/CryptoLandlords-server
+git clone https://github.com/Deasoso/CryptoLandlords-Server
 cd ddz-server
 composer install
 
