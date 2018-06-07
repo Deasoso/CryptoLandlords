@@ -115,7 +115,18 @@ class Room
             ]
         ]);
     }
-
+    
+    public function sendamessage(){
+        foreach ($this->players as $nodes) {
+            Console::out("messages:");
+            Console::out($nodes);
+            Console::out($nodes->getConnection());
+            $nodes->getConnection()->send(json_encode([
+                "action" => "message",
+                // "data" => ["players" => $room->players]
+            ]));
+        }
+    }
     public function gameOver($masterWin) {
         $cards = [];
         $masteraddr = "";
@@ -199,9 +210,9 @@ class Room
             return [false, "seat taken"];
         }
 
-        foreach ($this->players as $id => $player) {
-            if ($player->address == $node->address) return [false, "already in room"];
-        }
+        // foreach ($this->players as $id => $player) {
+        //     if ($player->address == $node->address) return [false, "already in room"];
+        // } //will back
 
         if (count($this->players) === 0){
             $node->firstinroom();

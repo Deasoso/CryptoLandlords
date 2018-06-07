@@ -39,6 +39,7 @@ class Server extends WsServer
     public function onOpen(Bucket $bucket) {
         $nodeCount = count($bucket->getSource()->getConnection()->getNodes());
         $roomCount = count($this->rooms);
+        Console::out("onopen");
         $maxroom = 200;
         while ($this->roomamount < $maxroom) {
             $this -> addRoom();
@@ -54,20 +55,24 @@ class Server extends WsServer
             Console::out("{$node->getId()} lefting2");
             $room = $this->rooms[$node->roomId];
             $leaveid = $node->id;
+            foreach ($room->players as $nodes) {
+                // $source->send([
+                //             "action" => "goout",
+                //             // "data" => ["players" => $room->players]
+                //         ]
+                //     , $nodes);
+                    $nodes->getProtocolImplementation()->send(json_encode([
+                        "action" => "goout",
+                        // "data" => ["players" => $room->players]
+                    ]));
+            }
             Console::out("{$node->getId()} lefting3");
-            $room->removePlayer($node);
             // $room->broadcast([
             //     "action" => "leavee",
             //     "playerId" => $leaveid,
             //     "data" => ["players" => $room->players]
             // ], $bucket->getSource());
-            foreach ($room->players as $node) {
-                $source->send([
-                            "action" => "goout",
-                            // "data" => ["players" => $room->players]
-                        ]
-                    , $node);
-            }
+            $room->removePlayer($node);
             // $source->send([
             //         "action" => "goout",
             //         // "data" => ["players" => $room->players]
@@ -108,6 +113,8 @@ class Server extends WsServer
                 case "setaddr":
                     $node->address = $message->data['address'];
                     break;
+                case "leave":
+                    break;
                 default:
                     $source->send("not in a room");
 
@@ -120,6 +127,8 @@ class Server extends WsServer
         switch ($message->action) {
 
             case "leave":
+                // $room->sendamessage();
+                // break;
                 $room->broadcastLastMessage([
                     "playerId" => $node->id,
                     //"players" => $room->getPlayers()
