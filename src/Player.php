@@ -13,19 +13,11 @@ class Player extends Node
     public $ready = false;
     public $ispayed = false;
     public $address = "0";
-    public $iscreator = false;
+    public $coin = 0;
 
     public function joinRoom($id, $playerId) {
         $this->roomId = $id;
         $this->id = $playerId;
-    }
-
-    public function createround(){
-        $this->ispayed = true;
-    }
-
-    public function firstinroom(){
-        $this->iscreator = true;
     }
 
     public function useCards(array $cards) {
@@ -52,6 +44,7 @@ class Player extends Node
         $this->cards = [];
         $this->master = false;
         $this->ready = false;
+        $this->ispayed = false;
     }
 
     public function info() {

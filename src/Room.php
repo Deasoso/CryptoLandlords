@@ -81,13 +81,11 @@ class Room
         }
         $source = $this->lastMessage->getSource(); // poor
         $playeraddr=array();
-        $i = 0;
         foreach ($this->players as $node) {
-            $playeraddr[$i] = $node->address;
-            $i++;
+            $playeraddr[$node->id] = $node->address;
         }
         foreach ($this->players as $node) {
-            if ($node->iscreator){
+            if ($node->id == 0){
                 $source->send(json_encode([
                     "action" => "createnewround",
                     "player1" => $playeraddr[0],
@@ -132,8 +130,19 @@ class Room
         $masteraddr = "";
         foreach ($this->players as $node) {
             $cards[$node->id] = (array) $node->getCards();
-            if ($node->master){
+            if ($node->master && $this->id < 100){
+                if($masterWin){
+                    $node->coin = $node->coin + $this->coin;
+                    $node->coin = $node->coin + $this->coin;
+                }
                 $masteraddr = $node->address;
+            }else{
+                if($masterWin){
+                    $node->coin = $node->coin + ($this->coin)/2;
+                }else{
+                    $node->coin = $node->coin + $this->coin;
+                    $node->coin = $node->coin + ($this->coin)/2;
+                }
             }
         }
         $this->broadcast([
@@ -143,6 +152,7 @@ class Room
                 "cards" => $cards,
                 "masteraddr" => $masteraddr,
                 "roundid" => $this->roundid,
+                "players" => $this->getPlayers(),
             ],
         ]);
     }
@@ -187,11 +197,20 @@ class Room
         return $count === 3;
     }
 
+    public function haveready(){
+        foreach ($this->players as $node) {
+            if ($node->ready) return true;
+        }
+        return false;
+    }
+
     public function getPlayers() {
         $players = [];
         foreach ($this->players as $id => $player) {
             $players[$id] = [
                 "ready" => $player->ready,
+                "coin" => $player->coin,
+                "address" => $player->address,
             ];
         }
         return $players;
@@ -213,10 +232,6 @@ class Room
         // foreach ($this->players as $id => $player) {
         //     if ($player->address == $node->address) return [false, "already in room"];
         // } //will back
-
-        if (count($this->players) === 0){
-            $node->firstinroom();
-        }
         $node->joinRoom($this->id, $seatIndex);
         $this->players[$seatIndex] = $node;
         return [true, "joined @{$seatIndex}"];

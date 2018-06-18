@@ -102,7 +102,8 @@ class Server extends WsServer
                     $room->lastMessage = $message;
                     list ($result, $reason) = $room->addPlayer($node, ($message->data["playerId"]) % 3);
                     $result
-                        ? $room->broadcastLastMessage(["players" => $room->getPlayers()])
+                        ? $room->broadcastLastMessage([ "players" => $room->getPlayers(),
+                                                        "roomCoin" => $room->coin])
                         : $source->send($reason);
                     break;
                 case 'listRoom':
@@ -112,6 +113,7 @@ class Server extends WsServer
                     break;
                 case "setaddr":
                     $node->address = $message->data['address'];
+                    $node->coin = $message->data['coin'];
                     break;
                 case "leave":
                     break;
@@ -150,7 +152,7 @@ class Server extends WsServer
                 } else {
                     if ($room->callCount > 2) {
                         $room->reset();
-                        $room->createround();
+                        $room->payed();
                         Console::out("room restarted.");
                     } else {
                         $room->tickSpeaker();
@@ -179,16 +181,22 @@ class Server extends WsServer
                 break;
 
             case "payed":
+                if ($room->id < 100)$node->coin = $node->coin - $room->coin;
                 $node->ispayed = true;
                 $room->payed();
                 break;
                 
             case "creatednewround":
-                //$node->createround();
                 $room->isreadytopay = true;
                 $room->requestpay($message->data['roundid']);
                 break;
 
+            case "changecoin":
+                if ($room->haveready()) return;
+                $room->coin = $message->data['newcoin'];
+                $room->broadcastLastMessage();
+                break;
+                
             default:
                 $source->send("unknown action.");
 
